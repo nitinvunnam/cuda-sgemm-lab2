@@ -1,3 +1,4 @@
 sgemm
 *.o
 *.ncu-rep
+._*
