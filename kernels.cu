@@ -81,6 +81,8 @@ void sgemm_naive([[maybe_unused]] int N, [[maybe_unused]] float alpha,
 //
 // Nothing else changes.  (Part 4 generalizes this kernel; see below.)
 // ---------------------------------------------------------------------
+
+//original coalesced kernel before implementing part 4
 __global__ void coalesced_kernel(int N, float alpha,
                                  const float* A, const float* B,
                                  float beta, float* C)
@@ -97,15 +99,16 @@ __global__ void coalesced_kernel(int N, float alpha,
     int idx = row * N + col;
     C[idx] = alpha * dot + beta * C[idx];
 }
+
+void sgemm_coalesced_shape(int bx, int by, int N, float alpha, const float* A,
+                           const float* B, float beta, float* C);
+
 void sgemm_coalesced([[maybe_unused]] int N, [[maybe_unused]] float alpha,
                      [[maybe_unused]] const float* A,
                      [[maybe_unused]] const float* B,
                      [[maybe_unused]] float beta, [[maybe_unused]] float* C)
 {
-    dim3 block(32,32);
-    dim3 grid(N/32, N/32);
-
-    coalesced_kernel<<<grid, block>>>(N, alpha, A, B, beta, C);
+    sgemm_coalesced_shape(32, 32, N, alpha, A, B, beta, C);
 }
 
 // ---------------------------------------------------------------------
@@ -147,7 +150,6 @@ __global__ void sgemm_tiled_kernel([[maybe_unused]] int N,
 
     for(int t = 0; t < N; t += T) {
 
-        // Each thread loads one element of A and B
         As[ty][tx] = A[row * N + t + tx];
         Bs[ty][tx] = B[(t + ty) * N + col];
 
@@ -209,6 +211,23 @@ void sgemm_tiled(int N, float alpha, const float* A, const float* B,
 // new code: sgemm_tiled_size above already runs your Part 3 kernel at
 // T = 8, 16 and 32.)
 // ---------------------------------------------------------------------
+__global__ void coalesced_shape_kernel(int N, float alpha,
+                                       const float* A,
+                                       const float* B,
+                                       float beta, float* C)
+{
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    float dot = 0.0f;
+
+    for (int k = 0; k < N; k++) {
+        dot += A[row * N + k] * B[k * N + col];
+    }
+
+    int idx = row * N + col;
+    C[idx] = alpha * dot + beta * C[idx];
+}
 
 void sgemm_coalesced_shape([[maybe_unused]] int bx, [[maybe_unused]] int by,
                            [[maybe_unused]] int N,
@@ -218,7 +237,10 @@ void sgemm_coalesced_shape([[maybe_unused]] int bx, [[maybe_unused]] int by,
                            [[maybe_unused]] float beta,
                            [[maybe_unused]] float* C)
 {
-    // TODO
+    dim3 block(bx, by);
+    dim3 grid(N / bx, N / by);
+
+    coalesced_shape_kernel<<<grid, block>>>(N, alpha, A, B, beta, C);
 }
 
 // ---------------------------------------------------------------------
