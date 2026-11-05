@@ -134,7 +134,34 @@ __global__ void sgemm_tiled_kernel([[maybe_unused]] int N,
                                    [[maybe_unused]] float beta,
                                    [[maybe_unused]] float* C)
 {
-    // TODO: __shared__ float As[T][T], Bs[T][T]; then the tile loop.
+    __shared__ float As[T][T];
+    __shared__ float Bs[T][T];
+
+    int row = blockIdx.y * T + threadIdx.y;
+    int col = blockIdx.x * T + threadIdx.x;
+
+    int tx = threadIdx.x;
+    int ty = threadIdx.y;
+
+    float dot = 0.0f;
+
+    for(int t = 0; t < N; t += T) {
+
+        // Each thread loads one element of A and B
+        As[ty][tx] = A[row * N + t + tx];
+        Bs[ty][tx] = B[(t + ty) * N + col];
+
+        __syncthreads();
+
+        for (int k = 0; k < T; k++) {
+            dot += As[ty][k] * Bs[k][tx];
+        }
+
+        __syncthreads();
+    }
+
+    int idx = row * N + col;
+    C[idx] = alpha * dot + beta * C[idx];
 }
 
 // PROVIDED: launch the kernel instantiated for one tile size.

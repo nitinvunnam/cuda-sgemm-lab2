@@ -13,7 +13,7 @@
 #define LAB2_PARTS_H
 
 #define HAVE_COALESCED 1    // Part 2: sgemm_coalesced
-#define HAVE_TILED     0    // Part 3: sgemm_tiled
+#define HAVE_TILED     1    // Part 3: sgemm_tiled
 #define HAVE_SWEEP     0    // Part 4: sgemm_coalesced_shape,
                             //         sgemm_tiled_size
 #define HAVE_REG1D     1    // Part 5: sgemm_reg1d (provided)
