@@ -328,7 +328,85 @@ void sgemm_reg2d([[maybe_unused]] int N, [[maybe_unused]] float alpha,
                  [[maybe_unused]] const float* B,
                  [[maybe_unused]] float beta, [[maybe_unused]] float* C)
 {
-    // TODO
+    __global__ void __launch_bounds__(reg2d::THREADS)
+    sgemm_reg2d_kernel(int N, float alpha,
+                    const float* __restrict__ A,
+                    const float* __restrict__ B,
+                    float beta, float* __restrict__ C)
+    {
+        using namespace reg2d;
+
+        __shared__ float As[BM * BK];
+        __shared__ float Bs[BK * BN];
+
+        const int tid = threadIdx.x;
+
+        const int threadRow = tid / (BN / TN);
+        const int threadCol = tid % (BN / TN);
+
+        A += blockIdx.y * BM * N;
+        B += blockIdx.x * BN;
+        C += blockIdx.y * BM * N + blockIdx.x * BN;
+
+        float acc[TM][TN] = {};
+        float regA[TM];
+        float regB[TN];
+
+        for(int t = 0; t < N; t += BK) {
+
+            for (int idx = tid; idx < BM * BK; idx += THREADS) {
+                int aRow = idx / BK;
+                int aCol = idx % BK;
+
+                As[aRow * BK + aCol] = A[aRow * N + aCol];
+            }
+
+            for (int idx = tid; idx < BK * BN; idx += THREADS) {
+                int bRow = idx / BN;
+                int bCol = idx % BN;
+
+                Bs[bRow * BN + bCol] = B[bRow * N + bCol];
+            }
+
+            __syncthreads();
+
+            A += BK;
+            B += BK * N;
+
+            for (int k = 0; k < BK; ++k) {
+
+                for (int i = 0; i < TM; ++i) {
+                    regA[i] = As[(threadRow * TM + i) * BK + k];
+                }
+
+                for (int j = 0; j < TN; ++j) {
+                    regB[j] = Bs[k * BN + threadCol * TN + j];
+                }
+
+                for (int i = 0; i < TM; ++i) {
+                    for (int j = 0; j < TN; ++j) {
+                        acc[i][j] += regA[i] * regB[j];
+                    }
+                }
+            }
+
+            __syncthreads();
+        }
+
+        for (int i = 0; i < TM; ++i) {
+            for (int j = 0; j < TN; ++j) {
+                float& c = C[(threadRow * TM + i) * N + threadCol * TN + j];
+                c = alpha * acc[i][j] + beta * c;
+            }
+        }
+    }
+
+    void sgemm_reg2d(int N, float alpha, const float* A,
+                    const float* B, float beta, float* C)
+    {
+        const dim3 grid(N / reg2d::BN, N / reg2d::BM);
+        sgemm_reg2d_kernel<<<grid, reg2d::THREADS>>>(N, alpha, A, B, beta, C);
+    }
 }
 
 // ---------------------------------------------------------------------

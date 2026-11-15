@@ -17,7 +17,7 @@
 #define HAVE_SWEEP     1    // Part 4: sgemm_coalesced_shape,
                             //         sgemm_tiled_size
 #define HAVE_REG1D     1    // Part 5: sgemm_reg1d (provided)
-#define HAVE_REG2D     0    // Part 6: sgemm_reg2d
+#define HAVE_REG2D     1    // Part 6: sgemm_reg2d
 #define HAVE_MINE      0    // Part 7: sgemm_mine
 
 #endif // LAB2_PARTS_H
