@@ -9,5 +9,12 @@ Mark generated code in the source with the citation comment from the syllabus:
    The purpose of this code is ... */
 ```
 
+
+used AI to write the entire job_vista.slurm as it said it had to be different than the job.slurm for ls6
+
+also used AI to help me analyze the profiling reports to figure out the part 6 bottleneck and then also asked it for help on 
+part 7 specifically on lines 464-472 because of the new syntax and command i have never seen before (reinterpret_cast)
+
+outside of this just mainly used AI to help understand what the nsight compute and ladder tables meant and how to decipher the performance gains and such
 ---
 
