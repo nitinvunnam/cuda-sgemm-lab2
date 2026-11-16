@@ -23,7 +23,7 @@
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH -t 00:45:00
-#SBATCH -A TODO_ACCOUNT
+#SBATCH -A TRA25006
 
 set -x
 module load gcc cuda
